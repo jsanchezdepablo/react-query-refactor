@@ -1,17 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import './App.css'
 import { UsersList } from './components/UsersList'
 import { SortBy, type User } from './types.d'
+import { useQuery } from '@tanstack/react-query'
+
+const fetchUsers = async (page: number): Promise<User[]> => {
+  return await fetch(`https://randomuser.me/api?results=10&seed=midudev&page=${page}`)
+    .then(async (res) => {
+      if (!res.ok) throw new Error('Error en la peticion')
+      return await res.json()
+    })
+    .then((res) => res.results)
+}
 
 function App () {
-  const [users, setUsers] = useState<User[]>([])
+  const { isLoading, isError, data: users = [] } = useQuery(
+    ['users'],
+    async () => await fetchUsers(1))
+
   const [showColors, setShowColors] = useState(false)
   const [sorting, setSorting] = useState<SortBy>(SortBy.NONE)
   const [filterCountry, setFilterCountry] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(false)
-  const originalUsers = useRef<User[]>([])
   const [currentPage, setCurrentPage] = useState(1)
+
+  console.log(currentPage)
 
   const toggleColors = () => {
     setShowColors(!showColors)
@@ -24,41 +36,17 @@ function App () {
   }
 
   const handleReset = () => {
-    setUsers(originalUsers.current)
+    // setUsers(originalUsers.current)
   }
 
   const handleDelete = (email: string) => {
-    const filteredUsers = users.filter((user) => user.email !== email)
-    setUsers(filteredUsers)
+    // const filteredUsers = users.filter((user) => user.email !== email)
+    // setUsers(filteredUsers)
   }
 
   const handleChangeSort = (sort: SortBy) => {
     setSorting(sort)
   }
-
-  useEffect(() => {
-    setIsLoading(true)
-    setError(false)
-    fetch(`https://randomuser.me/api?results=10&seed=midudev&page=${currentPage}`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Error en la peticion')
-        return await res.json()
-      })
-      .then((res) => {
-        setUsers((prevUsers) => {
-          const newUsers = prevUsers.concat(res.results)
-          originalUsers.current = newUsers
-          return newUsers
-        })
-      })
-      .catch((err) => {
-        setError(err)
-        console.error(err)
-      })
-      .finally(() => {
-        setIsLoading(false)
-      })
-  }, [currentPage])
 
   const filteredUsers = useMemo(() => {
     console.log('calculate filteredUsers')
@@ -117,9 +105,9 @@ function App () {
           users={sortedUsers}
                              />}
         {isLoading && <p>Cargando</p>}
-        {error && <p>Ha habido un error</p>}
-        {!isLoading && !error && users.length === 0 && <p>No hay usuarios</p>}
-        {!isLoading && !error && <button onClick={() => setCurrentPage(currentPage + 1)}>Cargar más resultados</button>}
+        {isError && <p>Ha habido un error</p>}
+        {!isLoading && !isError && users.length === 0 && <p>No hay usuarios</p>}
+        {!isLoading && !isError && <button onClick={() => setCurrentPage(currentPage + 1)}>Cargar más resultados</button>}
       </main>
     </div>
   )
