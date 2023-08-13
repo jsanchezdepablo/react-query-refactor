@@ -1,29 +1,38 @@
 import { useMemo, useState } from 'react'
-import './App.css'
-import { UsersList } from './components/UsersList'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { SortBy, type User } from './types.d'
-import { useQuery } from '@tanstack/react-query'
-
-const fetchUsers = async (page: number): Promise<User[]> => {
-  return await fetch(`https://randomuser.me/api?results=10&seed=midudev&page=${page}`)
-    .then(async (res) => {
-      if (!res.ok) throw new Error('Error en la peticion')
-      return await res.json()
-    })
-    .then((res) => res.results)
+import { UsersList } from './components/UsersList'
+import './App.css'
+interface UserResponse {
+  users: User[]
+  nextCursor?: number
 }
 
+const fetchUsers = async ({ pageParam = 1 }: { pageParam?: number }): Promise<UserResponse> => await fetch(`https://randomuser.me/api?results=10&seed=midudev&page=${pageParam}`)
+  .then(async (res) => {
+    if (!res.ok) throw new Error('Error en la peticion')
+    return await res.json()
+  })
+  .then((res) => {
+    const currentPage = Number(res.info.page)
+    return {
+      users: res.results,
+      nextCursor: currentPage > 3 ? undefined : currentPage + 1
+    }
+  })
+
 function App () {
-  const { isLoading, isError, data: users = [] } = useQuery(
-    ['users'],
-    async () => await fetchUsers(1))
+  const { isLoading, isError, data, refetch, fetchNextPage, hasNextPage } = useInfiniteQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers, // el hook es el encargado de pasar la info necesaria al fetchUsers
+    getNextPageParam: (lastPage, pages) => lastPage.nextCursor // aquí definimos el valor de pageParam que recibe la queryFn
+  })
+
+  const users: User[] = data?.pages?.flatMap(({ users }) => users) ?? []
 
   const [showColors, setShowColors] = useState(false)
   const [sorting, setSorting] = useState<SortBy>(SortBy.NONE)
   const [filterCountry, setFilterCountry] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-
-  console.log(currentPage)
 
   const toggleColors = () => {
     setShowColors(!showColors)
@@ -36,7 +45,7 @@ function App () {
   }
 
   const handleReset = () => {
-    // setUsers(originalUsers.current)
+    void refetch()
   }
 
   const handleDelete = (email: string) => {
@@ -107,7 +116,9 @@ function App () {
         {isLoading && <p>Cargando</p>}
         {isError && <p>Ha habido un error</p>}
         {!isLoading && !isError && users.length === 0 && <p>No hay usuarios</p>}
-        {!isLoading && !isError && <button onClick={() => setCurrentPage(currentPage + 1)}>Cargar más resultados</button>}
+        {!isLoading && !isError && hasNextPage === true && <button onClick={() => { void fetchNextPage() }}>Cargar más resultados</button>}
+        {!isLoading && !isError && hasNextPage === false && <p>No hay más resultados</p>}
+
       </main>
     </div>
   )
