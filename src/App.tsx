@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { SortBy, type User } from './types.d'
 import { UsersList } from './components/UsersList'
 import { useUsers } from './hooks/useUsers'
+import Results from './components/Results'
 import './App.css'
 
 function App () {
@@ -65,6 +66,7 @@ function App () {
   return (
     <div className='App'>
       <h1>Prueba técnica</h1>
+      <Results />
       <header>
         <button onClick={toggleColors}>Colorear files</button>
 
