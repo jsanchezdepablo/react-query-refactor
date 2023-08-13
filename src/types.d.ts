@@ -31,6 +31,11 @@ export interface User {
   nat: string
 }
 
+export interface UserResponse {
+  users: User[]
+  nextCursor?: number
+}
+
 export interface Dob {
   date: Date
   age: number
