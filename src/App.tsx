@@ -1,34 +1,11 @@
 import { useMemo, useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
 import { SortBy, type User } from './types.d'
 import { UsersList } from './components/UsersList'
+import { useUsers } from './hooks/useUsers'
 import './App.css'
-interface UserResponse {
-  users: User[]
-  nextCursor?: number
-}
-
-const fetchUsers = async ({ pageParam = 1 }: { pageParam?: number }): Promise<UserResponse> => await fetch(`https://randomuser.me/api?results=10&seed=midudev&page=${pageParam}`)
-  .then(async (res) => {
-    if (!res.ok) throw new Error('Error en la peticion')
-    return await res.json()
-  })
-  .then((res) => {
-    const currentPage = Number(res.info.page)
-    return {
-      users: res.results,
-      nextCursor: currentPage > 3 ? undefined : currentPage + 1
-    }
-  })
 
 function App () {
-  const { isLoading, isError, data, refetch, fetchNextPage, hasNextPage } = useInfiniteQuery({
-    queryKey: ['users'],
-    queryFn: fetchUsers, // el hook es el encargado de pasar la info necesaria al fetchUsers
-    getNextPageParam: (lastPage, pages) => lastPage.nextCursor // aquí definimos el valor de pageParam que recibe la queryFn
-  })
-
-  const users: User[] = data?.pages?.flatMap(({ users }) => users) ?? []
+  const { users, isLoading, isError, refetch, fetchNextPage, hasNextPage } = useUsers()
 
   const [showColors, setShowColors] = useState(false)
   const [sorting, setSorting] = useState<SortBy>(SortBy.NONE)
